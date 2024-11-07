@@ -10,6 +10,9 @@
 ```bash
 export API_URL=$(tf output -raw websocket_api_endpoint)
 uv run scripts/test_websocket.py
+
+uv run scripts/client.py
+
 # view websocket connect logs
 uv run --with zmunk-awslogs -m awslogs $(tf output -raw websocket_connect_lambda_log_group)
 # view websocket disconnect logs
