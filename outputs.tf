@@ -17,3 +17,4 @@ output "websocket_sendmessage_lambda_log_group" {
   description = "Log group name of websocket sendmessage function"
   value       = module.websocket_api.sendmessage_lambda_log_group
 }
+

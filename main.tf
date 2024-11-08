@@ -16,7 +16,7 @@ provider "aws" {
 
 module "websocket_api" {
   source  = "zmunk/websocket-api/aws"
-  version = "1.0.0"
+  version = "~> 1.0.0"
 
   api_name                  = "WebsocketAPI"
   connect_function_path     = "./lambda/websocket_connect"
