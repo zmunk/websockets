@@ -24,7 +24,7 @@ uv run --with zmunk-awslogs -m awslogs $(tf output -raw websocket_disconnect_lam
 # view websocket sendmessage logs
 uv run --with zmunk-awslogs -m awslogs $(tf output -raw websocket_sendmessage_lambda_log_group)
 ```
-## Websocket Dialog Documentation
+# Websocket Dialog Documentation
 Receiving message from server:
 ```json
 {
@@ -35,13 +35,24 @@ Receiving message from server:
     }
 }
 ```
-Sending message to server (Note: `"action": "sendmessage"` needs to always be included):
+## Sending data to server
+Note: `"action": "sendmessage"` needs to always be included in the object.
+
+Sending message
 ```json
 {
-    "action": "sendmessage",
     "type": "message",
     "body": {
       "message": "Hello, friend."
+    }
+}
+```
+Updating username:
+```json
+{
+    "type": "set_username",
+    "body": {
+      "username": "Elliot"
     }
 }
 ```

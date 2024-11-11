@@ -24,7 +24,24 @@ def lambda_handler(event, context):
     event_body = body["body"]
 
     if event_type == "message":
-        broadcast_message(endpoint, conn_id, event_body["message"])
+        try:
+            response = table.get_item(Key={"connection_id": conn_id})
+            sender_name = response.get("Item", {}).get("username")
+        except Exception as e:
+            print(f"Error getting connection: {str(e)}")
+            sender_name = None
+        broadcast_message(endpoint, sender_name, conn_id, event_body["message"])
+
+    elif event_type == "set_username":
+        try:
+            table.update_item(
+                Key={"connection_id": conn_id},
+                UpdateExpression="SET username = :username",
+                ExpressionAttributeValues={":username": event_body["username"]},
+            )
+        except Exception as e:
+            print(f"Error getting connection: {str(e)}")
+
     else:
         print(f"unknown event type: {event_type}")
         return {"statusCode": 500}
@@ -32,10 +49,12 @@ def lambda_handler(event, context):
     return {}
 
 
-def broadcast_message(endpoint, sender_id, message):
+def broadcast_message(endpoint, sender_name, sender_id, message):
     apigateway = boto3.client("apigatewaymanagementapi", endpoint_url=endpoint)
 
-    sender_name = "anonymous"
+    # sender_name = "anonymous"
+    if sender_name is None:
+        sender_name = "anonymous"
     data = {
         "type": "message",
         "body": {

@@ -32,6 +32,20 @@ except Exception as e:
     exit(1)
 print("successfully connected")
 
+
+inp = input("Please enter your username: ")
+socket.send(
+    json.dumps(
+        {
+            "action": "sendmessage",  # required
+            "type": "set_username",
+            "body": {
+                "username": inp,
+            },
+        }
+    )
+)
+
 while True:
     try:
         inp = input("> ")
