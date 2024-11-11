@@ -1,64 +1,186 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "websockets",
-# ]
-# ///
 import os
 import json
-import websockets.sync.client
-import atexit
+import asyncio
+import builtins
+import sys
+import tty
+import termios
+import websockets
+from websockets.exceptions import ConnectionClosedOK
 
 API_URL = os.environ["API_URL"]
+DEBUGGING = False
 
 
-@atexit.register
-def close_socket():
-    try:
-        socket.close()
-    except NameError:
-        pass
-    else:
-        print("\rsuccessfully disconnected")
-
-
-try:
-    socket = websockets.sync.client.connect(API_URL)
-except Exception as e:
-    print(e)
-    print("failed to connect")
-    print(f"{API_URL = }")
-    print("make sure the API_URL is correct")
-    exit(1)
-print("successfully connected")
-
-
-inp = input("Please enter your username: ")
-socket.send(
-    json.dumps(
-        {
-            "action": "sendmessage",  # required
-            "type": "set_username",
-            "body": {
-                "username": inp,
-            },
-        }
-    )
-)
-
-while True:
-    try:
-        inp = input("> ")
-    except KeyboardInterrupt:
-        break
-    socket.send(
+async def send_socket_message(socket, event_type, body):
+    await socket.send(
         json.dumps(
             {
                 "action": "sendmessage",  # required
-                "type": "message",
-                "body": {
-                    "message": inp,
-                },
+                "type": event_type,
+                "body": body,
             }
         )
     )
+
+
+async def set_username(socket):
+    inp = input("Please enter your username: ")
+    await send_socket_message(socket, "set_username", {"username": inp})
+
+
+def println(x):
+    builtins.print("\r" + str(x), end="", flush=True)
+    builtins.print("\r")
+
+
+def print(x):
+    builtins.print("\r" + str(x), end="")
+
+
+async def receiver(socket, queue):
+    """
+    If receives message, adds to queue.
+    """
+
+    def println(x):
+        builtins.print(x, end="", flush=True)
+        builtins.print("\r")
+
+    while True:
+        try:
+            raw_message = await socket.recv()
+            message = json.loads(raw_message)
+            assert message["type"] == "message"
+            body = message["body"]
+            display = f"{body['sender']}: {body['message']}"
+            await queue.put({"type": "message", "value": display})
+        except (KeyboardInterrupt, ConnectionClosedOK):
+            break
+        except Exception as e:
+            print(f"Error in receiver: {e}")
+            break
+
+
+async def mainloop(socket, queue):
+    """
+    Reads from queue, if message from server, prints message, if keypress from user, prints  keypress.
+    """
+
+    def clear():
+        print(" " * len(display))
+
+    prompt = "> "
+    display = prompt
+    user_input = ""
+    print(display)
+    while True:
+        msg = await queue.get()
+
+        if DEBUGGING:
+            println(msg)
+            continue
+
+        if msg["type"] == "event_key":
+            if msg["value"] == EventKey.DELETE:
+                # Handle delete
+                clear()
+                user_input = user_input[:-1]
+            elif msg["value"] == EventKey.ENTER:
+                # Handle submit
+                print("\n")
+                await send_socket_message(socket, "message", {"message": user_input})
+                user_input = ""
+        elif msg["type"] == "character":
+            user_input += msg["value"]  # Append character to display
+        elif msg["type"] == "message":
+            clear()
+            println(msg["value"])
+        else:
+            continue
+        display = prompt + user_input
+        print(display)
+
+
+def _getch():
+    """Get one character from user"""
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(sys.stdin.fileno())
+        ch = sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return ch
+
+
+class EventKey:
+    DELETE = "delete"
+    ENTER = "enter"
+    LEFT = "left"
+    RIGHT = "right"
+    UP = "up"
+    DOWN = "down"
+
+    ALL = {DELETE, ENTER, LEFT, RIGHT, UP, DOWN}
+
+
+async def getch():
+    loop = asyncio.get_running_loop()
+    ch = await loop.run_in_executor(None, _getch)
+    if ch == "\x1b":
+        code = ""
+        for _ in range(2):
+            code += await loop.run_in_executor(None, _getch)
+        if code == "[D":
+            return EventKey.LEFT
+        elif code == "[C":
+            return EventKey.RIGHT
+        elif code == "[A":
+            return EventKey.UP
+        elif code == "[B":
+            return EventKey.DOWN
+        else:
+            raise RuntimeError(f"code: {code}")
+    if ch == "\x03":
+        raise KeyboardInterrupt
+    if ch == "\x7f":
+        return EventKey.DELETE
+    if ch == "\r":
+        return EventKey.ENTER
+    return ch
+
+
+async def user_interaction(queue):
+    """
+    Checks for user interaction, if user presses a key, adds keypress to queue.
+    """
+    while True:
+        ch = await getch()
+
+        if ch in EventKey.ALL:
+            await queue.put({"type": "event_key", "value": ch})
+        else:
+            await queue.put({"type": "character", "value": ch})
+
+
+async def main():
+    queue = asyncio.Queue()
+
+    try:
+        async with websockets.connect(API_URL) as socket:
+            await set_username(socket)
+            await asyncio.gather(
+                mainloop(socket, queue),
+                user_interaction(queue),
+                receiver(socket, queue),
+            )
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+        pass
+
+
+try:
+    asyncio.run(main())
+except KeyboardInterrupt:
+    pass
