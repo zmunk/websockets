@@ -1,3 +1,9 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "websockets",
+# ]
+# ///
 import os
 import json
 import asyncio
