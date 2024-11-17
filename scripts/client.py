@@ -44,6 +44,10 @@ def print(x):
     builtins.print("\r" + str(x), end="")
 
 
+def grey(s):
+    return f"\033[2;37m{s}\033[0m"
+
+
 async def receiver(socket, queue):
     """
     If receives message, adds to queue.
@@ -57,9 +61,18 @@ async def receiver(socket, queue):
         try:
             raw_message = await socket.recv()
             message = json.loads(raw_message)
-            assert message["type"] == "message"
+            message_type = message["type"]
             body = message["body"]
-            display = f"{body['sender']}: {body['message']}"
+            match message_type:
+                case "user_message":
+                    username = body["sender"]
+                    if username is None:
+                        username = grey("anonymous")
+                    display = f"{username}: {body['message']}"
+                case "server_message":
+                    display = body["message"]
+                case _:
+                    raise RuntimeError(f"invalid type: {message_type}")
             await queue.put({"type": "message", "value": display})
         except (KeyboardInterrupt, ConnectionClosedOK):
             break

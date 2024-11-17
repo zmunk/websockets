@@ -25,16 +25,28 @@ uv run --with zmunk-awslogs -m awslogs $(tf output -raw websocket_disconnect_lam
 uv run --with zmunk-awslogs -m awslogs $(tf output -raw websocket_sendmessage_lambda_log_group)
 ```
 # Websocket Dialog Documentation
-Receiving message from server:
+
+## Receiving user message from server
+Note: If `sender` is `None`, user is anonymous.
 ```json
 {
-    "type": "message",
+    "type": "user_message",
     "body": {
         "message": "Hello, friend.",
         "sender": "Elliot"
     }
 }
 ```
+## Receiving server message
+```json
+{
+    "type": "server_message",
+    "body": {
+        "message": "Elliot has entered the chat."
+    }
+}
+```
+
 ## Sending data to server
 Note: `"action": "sendmessage"` needs to always be included in the object.
 
