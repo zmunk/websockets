@@ -11,10 +11,10 @@ import builtins
 import sys
 import tty
 import termios
+import argparse
 import websockets
 from websockets.exceptions import ConnectionClosedOK
 
-API_URL = os.environ["API_URL"]
 DEBUGGING = False
 
 
@@ -183,11 +183,11 @@ async def user_interaction(queue):
             await queue.put({"type": "character", "value": ch})
 
 
-async def main():
+async def main(url):
     queue = asyncio.Queue()
 
     try:
-        async with websockets.connect(API_URL) as socket:
+        async with websockets.connect(url) as socket:
             await set_username(socket)
             await asyncio.gather(
                 mainloop(socket, queue),
@@ -199,7 +199,11 @@ async def main():
         pass
 
 
-try:
-    asyncio.run(main())
-except KeyboardInterrupt:
-    pass
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--url", help="api url", required=True)
+    args = parser.parse_args()
+    try:
+        asyncio.run(main(args.url))
+    except KeyboardInterrupt:
+        pass

@@ -11,7 +11,7 @@
 export API_URL=$(tf output -raw websocket_api_endpoint)
 uv run scripts/test_websocket.py
 
-uv run scripts/client.py
+uv run scripts/client.py --url $(tf output -raw websocket_api_endpoint)
 
 uv run scripts/test_recv.py
 ```
