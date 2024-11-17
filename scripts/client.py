@@ -14,6 +14,7 @@ import termios
 import argparse
 import websockets
 from websockets.exceptions import ConnectionClosedOK
+from .colors import color_options
 
 DEBUGGING = False
 
@@ -46,13 +47,6 @@ def print(x):
 
 def grey(s):
     return f"\033[2;37m{s}\033[0m"
-
-
-def get_random_rgb():
-    r = random.randrange(0, 256)
-    g = random.randrange(0, 256)
-    b = random.randrange(0, 256)
-    return (r, g, b)
 
 
 def colored(message, color: tuple[int, int, int]) -> str:
@@ -88,7 +82,7 @@ async def receiver(socket, queue):
                     if user_id in user_colors:
                         color = user_colors[user_id]
                     else:
-                        color = get_random_rgb()
+                        color = random.choice(color_options)
                         user_colors[user_id] = color
 
                     display = f"{colored(username, color)}: {body['message']}"

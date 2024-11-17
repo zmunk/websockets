@@ -1,18 +1,23 @@
-## Setup
+# Setup
+
+## Setup Infrastructure
 
     $ tf apply
 
-## Teardown
+## Run Client
+
+    $ uv run -m scripts.client --url $(tf output -raw websocket_api_endpoint)
+
+## Teardown Infrastructure
 
     $ tf destroy
+
+# Debugging
 
 ## Testing websocket
 ```bash
 export API_URL=$(tf output -raw websocket_api_endpoint)
 uv run scripts/test_websocket.py
-
-uv run scripts/client.py --url $(tf output -raw websocket_api_endpoint)
-
 uv run scripts/test_recv.py
 ```
 ## View lambda logs

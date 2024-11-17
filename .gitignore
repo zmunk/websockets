@@ -2,3 +2,4 @@
 builds
 terraform.tfstate*
 .envrc
+scripts/__pycache__
