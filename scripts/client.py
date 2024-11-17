@@ -9,8 +9,6 @@ import json
 import asyncio
 import builtins
 import sys
-import tty
-import termios
 import argparse
 import websockets
 from websockets.exceptions import ConnectionClosedOK
@@ -138,16 +136,27 @@ async def mainloop(socket, queue):
         print(display)
 
 
+import sys
+
+
 def _getch():
-    """Get one character from user"""
-    fd = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(fd)
-    try:
-        tty.setraw(sys.stdin.fileno())
-        ch = sys.stdin.read(1)
-    finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-    return ch
+    """Get one character from user (cross-platform implementation)"""
+    if sys.platform == "win32":
+        import msvcrt
+
+        return msvcrt.getch().decode("utf-8")
+    else:
+        import termios
+        import tty
+
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
 
 
 class EventKey:
