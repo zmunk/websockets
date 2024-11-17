@@ -1,5 +1,6 @@
 import os
 import json
+import uuid
 import boto3
 from botocore.exceptions import ClientError
 
@@ -27,23 +28,31 @@ def lambda_handler(event, context):
     if event_type == "message":
         try:
             response = table.get_item(Key={"connection_id": conn_id})
-            sender_name = response.get("Item", {}).get("username")
+            item = response.get("Item", {})
+            sender_name = item.get("username")
+            sender_id = item["user_id"]
         except Exception as e:
             print(f"Error getting connection: {str(e)}")
             sender_name = None
-        broadcast_user_message(
-            event_body["message"],
-            sender_name,
-            skip=[conn_id],
-        )
+        else:
+            broadcast_user_message(
+                event_body["message"],
+                sender_name,
+                sender_id,
+                skip=[conn_id],
+            )
 
     elif event_type == "set_username":
         username = event_body["username"]
+        user_id = str(uuid.uuid4())
         try:
             table.update_item(
                 Key={"connection_id": conn_id},
-                UpdateExpression="SET username = :username",
-                ExpressionAttributeValues={":username": username},
+                UpdateExpression="SET username = :username, user_id = :user_id",
+                ExpressionAttributeValues={
+                    ":username": username,
+                    ":user_id": user_id,
+                },
             )
         except Exception as e:
             print(f"Error getting connection: {str(e)}")
@@ -58,12 +67,13 @@ def lambda_handler(event, context):
     return {}
 
 
-def broadcast_user_message(message, sender_name, skip=[]):
+def broadcast_user_message(message, sender_name, sender_id, skip=[]):
     data = {
         "type": "user_message",
         "body": {
             "message": message,
             "sender": sender_name,
+            "sender_id": sender_id,
         },
     }
     broadcast_message(data, skip=skip)

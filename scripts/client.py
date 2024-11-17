@@ -4,7 +4,7 @@
 #     "websockets",
 # ]
 # ///
-import os
+import random
 import json
 import asyncio
 import builtins
@@ -48,6 +48,18 @@ def grey(s):
     return f"\033[2;37m{s}\033[0m"
 
 
+def get_random_rgb():
+    r = random.randrange(0, 256)
+    g = random.randrange(0, 256)
+    b = random.randrange(0, 256)
+    return (r, g, b)
+
+
+def colored(message, color: tuple[int, int, int]) -> str:
+    r, g, b = color
+    return f"\033[0;38;2;{r};{g};{b}m{message}\033[0m"
+
+
 async def receiver(socket, queue):
     """
     If receives message, adds to queue.
@@ -56,6 +68,8 @@ async def receiver(socket, queue):
     def println(x):
         builtins.print(x, end="", flush=True)
         builtins.print("\r")
+
+    user_colors = {}
 
     while True:
         try:
@@ -66,9 +80,18 @@ async def receiver(socket, queue):
             match message_type:
                 case "user_message":
                     username = body["sender"]
+                    user_id = body["sender_id"]
+
                     if username is None:
                         username = grey("anonymous")
-                    display = f"{username}: {body['message']}"
+
+                    if user_id in user_colors:
+                        color = user_colors[user_id]
+                    else:
+                        color = get_random_rgb()
+                        user_colors[user_id] = color
+
+                    display = f"{colored(username, color)}: {body['message']}"
                 case "server_message":
                     display = body["message"]
                 case _:

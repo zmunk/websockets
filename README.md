@@ -33,7 +33,8 @@ Note: If `sender` is `None`, user is anonymous.
     "type": "user_message",
     "body": {
         "message": "Hello, friend.",
-        "sender": "Elliot"
+        "sender": "Elliot",
+        "sender_id": 1234
     }
 }
 ```
