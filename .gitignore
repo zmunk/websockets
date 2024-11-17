@@ -1,5 +1,4 @@
 .terraform
 builds
-terraform.tfstate
-terraform.tfstate.backup
+terraform.tfstate*
 .envrc
