@@ -6,7 +6,7 @@
 
 ## Run Client
 
-    $ uv run -m scripts.client --url $(tf output -raw websocket_api_endpoint)
+    $ uv run -m scripts.client --with websockets --url $(tf output -raw websocket_api_endpoint)
 
 ## Teardown Infrastructure
 
